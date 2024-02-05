@@ -1,0 +1,3 @@
+#define WIFI_PASSWORD "password"
+#define WIFI_SSID "ssid"
+#define DATABASE_ROOT "firebase rtdb" ex: https://docs-examples.firebaseio.com/fireblog/users.json, just the first part: https://docs-examples.firebaseio.com
