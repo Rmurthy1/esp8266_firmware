@@ -76,11 +76,21 @@ void setup() {
   */
 }
 
+int providedNumber = 0;
+
+void serialFlush(){
+  while(mySerial.available() > 0) {
+    char t = mySerial.read();
+    Serial.println(t);
+  }
+}
+
 void loop() {
 
   // put your main code here, to run repeatedly:
   while (mySerial.available()) { 
     message = mySerial.readString();
+    serialFlush();
     messageReady = true;
   }
   if (messageReady == true) {
@@ -89,6 +99,8 @@ void loop() {
     Serial.println(output);
     lightBlink = false;
     // this is where the data should be collected from serial and stored for upload every two minutes.
+
+    providedNumber = message.toInt();
 
   }
   blinkLight(lightBlink); // built in led, blinking every second until this parameter is false
@@ -99,11 +111,16 @@ void loop() {
   // every (2 * 60000) seconds
   if (((millis() / 60000) % 2)) {
     if (sendData == true) {
+      // temporary check to overwrite the uploaded number
+      if (providedNumber > 0) {
+        digitalWrite(wifiLED, HIGH);
+        number = providedNumber;
+      }
+      
       String message = "output: " + String(number) + " MILLIS: " + String(millis());
       Serial.println((message));
       thingSpeakWriteREST(number);
       numberCounter();
-      //thingSpeakWrite();
       sendData = false;
     }
   } else {
@@ -133,6 +150,7 @@ void blinkLight(bool keepBlinking) {
   }
 }
 
+// write to thingspeak using a global api key and parameter data
 void thingSpeakWriteREST(int data) {
 
   // prepare the json file then make it into a string
