@@ -168,7 +168,7 @@ void prepareJSON(String message) {
   for (int i = 1; i <= totalTokensCount; i++) {
     String field = "field"+String(i);
     String dataValue = getValue(message, ';', i);
-    doc[field] = dataValue.toInt();
+    doc[field] = dataValue.toDouble();
   }
   
 }
