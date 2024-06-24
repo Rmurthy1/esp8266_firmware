@@ -95,13 +95,8 @@ void loop() {
   }
   if (messageReady == true) {
     messageReady = false;
-    String output = "output: " + message;
-    Serial.println(output);
     lightBlink = false;
     // this is where the data should be collected from serial and stored for upload every two minutes.
-
-    providedNumber = message.toInt();
-
   }
   blinkLight(lightBlink); // built in led, blinking every second until this parameter is false
   wifiStatusLED(); // turn the wifi status led on if we are connected
@@ -111,16 +106,9 @@ void loop() {
   // every (2 * 60000) seconds
   if (((millis() / 60000) % 2)) {
     if (sendData == true) {
-      // temporary check to overwrite the uploaded number
-      if (providedNumber > 0) {
-        digitalWrite(wifiLED, HIGH);
-        number = providedNumber;
-      }
-      
-      String message = "output: " + String(number) + " MILLIS: " + String(millis());
+      digitalWrite(wifiLED, HIGH);
       Serial.println((message));
-      thingSpeakWriteREST(number);
-      numberCounter();
+      thingSpeakWriteREST(message);
       sendData = false;
     }
   } else {
@@ -128,36 +116,20 @@ void loop() {
   }
 }
 
-void numberCounter() {
-  number++;
-  if(number > 99){
-    number = 0;
-  }
-}
-
 // called from loop, just blinks the light.
-// 
 void blinkLight(bool keepBlinking) {
   if (lightBlink == true) {
-    /*if (millis() > time_now + period) {
-      time_now = millis();
-      digitalWrite(LED_BUILTIN, lightOn);
-      lightOn = !lightOn; // switch the light
-      Serial.println(lightOn);
-   }  
-  }*/
     digitalWrite(LED_BUILTIN, (millis() / period) % 2);
   }
 }
 
 // write to thingspeak using a global api key and parameter data
-void thingSpeakWriteREST(int data) {
+void thingSpeakWriteREST(String data) {
 
   // prepare the json file then make it into a string
   prepareJSON(data);
   String payload;
   serializeJson(doc, payload);
-
   std::unique_ptr<BearSSL::WiFiClientSecure> client(new BearSSL::WiFiClientSecure);
   client->setInsecure();
 
@@ -187,20 +159,38 @@ void thingSpeakWriteREST(int data) {
   
 }
 
-// https://www.mathworks.com/help/thingspeak/choose-between-rest-and-mqtt.html
-void prepareJSON(int data) {
+// total tokens will
+void prepareJSON(String message) {
   doc["api_key"] = THINGSPEAK_API_WRITE;
-  doc["field1"] = data;
+  // tokenize the string, count the tokens, prepare the data.
+  String totalTokens = getValue(message, ';', 0);
+  int totalTokensCount = totalTokens.toInt();
+  for (int i = 1; i <= totalTokensCount; i++) {
+    String field = "field"+String(i);
+    String dataValue = getValue(message, ';', i);
+    doc[field] = dataValue.toInt();
+  }
+  
 }
-/*
-  import requests
-    resp = requests.post('https://api.thingspeak.com/update.json', 
-                         json={"api_key"="XXXXXXXXXXXXXXXX",
-                         "field1"=73,
-                         "field2"=66})
 
-https://gist.github.com/vi3k6i5/5099e4fceeb4bff5eb0b35f7d5b7e298                         
-*/
+// https://stackoverflow.com/questions/9072320/split-string-into-string-array
+String getValue(String data, char separator, int index)
+{
+  int found = 0;
+  int strIndex[] = {0, -1};
+  int maxIndex = data.length()-1;
+
+  for(int i=0; i<=maxIndex && found<=index; i++){
+    if(data.charAt(i)==separator || i==maxIndex){
+        found++;
+        strIndex[0] = strIndex[1]+1;
+        strIndex[1] = (i == maxIndex) ? i+1 : i;
+    }
+  }
+
+  return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
+}
+
 
 void wifiStatusLED() {
     if ((WiFiMulti.run() == WL_CONNECTED)) {
